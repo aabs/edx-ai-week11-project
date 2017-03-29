@@ -1,6 +1,7 @@
 import unittest
 
-from SentimentPredictor import *
+from SentimentPredictor import SentimentPredictor
+from driver_3 import imdb_data_preprocess
 
 
 class Reporter:
@@ -32,3 +33,11 @@ class TestPredictorBuilderTests(unittest.TestCase):
         sut.fit()
         results = [sut.predict(x) for x in corpus]
         self.assertIsNotNone(results)
+
+
+class XformerTests(unittest.TestCase):
+    def test_run (self):
+        imdb_data_preprocess('./')
+    def test_run_mixed (self):
+        imdb_data_preprocess('./', mix=True)
+

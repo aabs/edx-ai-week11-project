@@ -25,20 +25,16 @@ def get_all_files(mypath):
 
 
 def read_stopwords():
-    with open(stopwords_path, 'r') as fi:
-        data = fi.readlines()
-        return data
+    global stop_words
+
+    if stop_words is None:
+        with open(stopwords_path, 'r') as fi:
+            data = fi.readlines()
+        stop_words = set([s.strip() for s in data])
 
 
 def process_file_contents(s):
     global stop_words
-    import re
-
-    if stop_words is None:
-        stop_words = read_stopwords()
-        stop_words = set([s.strip() for s in stop_words])
-
-    # words = re.findall(r"[\w']+", s)
     words = s.replace('"', '""').split()
     result = [word for word in words if word not in stop_words]
     return " ".join(result)
@@ -50,22 +46,28 @@ def imdb_data_preprocess(inpath, outpath="./", name="imdb_tr.csv", mix=False):
    imdb_tr.csv. Each text file in train_path should be stored
    as a row in imdb_tr.csv. And imdb_tr.csv should have two
    columns, "text" and label"""
-
+    read_stopwords()
     # first get all of the positive reviews
     row_counter = 0
+    review_dir_root = inpath + train_path
+    pos_review_files = [(review_dir_root + "pos/" +t, 1) for t in get_all_files(review_dir_root + "pos/")]
+    neg_review_files = [(review_dir_root + "neg/" +t, 0) for t in get_all_files(review_dir_root + "neg/")]
+
     with open(outpath + name, 'w') as fo:
         fo.write("%s, %s, %s\n" % ("row_counter", "text", "polarity"))
-        root_path = inpath  + train_path + "pos/"
-        review_files = get_all_files(root_path)
-        for filename in review_files:
-            output_processed_row(fo, root_path+filename, row_counter, 1)
-            row_counter += 1
+        if mix:
+            for ((r1f, r1p), (r2f, r2p)) in zip(pos_review_files, neg_review_files):
+                output_processed_row(fo, r1f, row_counter, r1p)
+                output_processed_row(fo, r2f, row_counter+1, r2p)
+                row_counter += 2
+        else:
+            for (r1f, r1p) in pos_review_files:
+                output_processed_row(fo, r1f, row_counter, r1p)
+                row_counter += 1
 
-        root_path = inpath + train_path + "neg/"
-        review_files = get_all_files(root_path)
-        for filename in review_files:
-            output_processed_row(fo, root_path+filename, row_counter, 0)
-            row_counter += 1
+            for (r2f, r2p) in neg_review_files:
+                output_processed_row(fo, r2f, row_counter, r2p)
+                row_counter += 1
 
 
 def output_processed_row(fo, path, row, polarity):
@@ -140,8 +142,3 @@ def test_model(model, test_data, test_labels):
 
 def output_results(results):
     pass
-
-class XformerTests(unittest.TestCase):
-    def test_run (self):
-        imdb_data_preprocess('./')
-
